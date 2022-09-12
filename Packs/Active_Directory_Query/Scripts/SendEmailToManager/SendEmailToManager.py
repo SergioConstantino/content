@@ -5,99 +5,124 @@ from CommonServerUserPython import *
 from string import Template
 
 
-def find_email(incident):
-    email = None
+def find_additional_incident_info(incident: dict) -> dict:
+    additional_info = {}
 
-    for t in incident['labels']:
-        if t['type'] == 'Email/from':
-            email = t['value'].lower()
+    for label in incident['labels']:
+        if label['type'] == 'Email/from':
+            additional_info["employee_email"] = label['value'].lower()
 
-    return email
+    additional_info["incident_subject"] = demisto.gets(incident, 'name')
+    additional_info["employee_request"] = incident.get('details')
 
-def main():
-    email = demisto.get(demisto.args(), 'email')
+    return additional_info
 
-    if not email:
-        email = find_email(demisto.incidents()[0])
 
-    if not email:
-        demisto.results('Could not find employee email. Quiting.')
-
-    manager_attribute = demisto.get(demisto.args(), 'manager')
+def find_additional_ad_info(email: str, manager_attribute: str) -> dict:
+    additional_info = {}
 
     if not manager_attribute:
         manager_attribute = 'manager'
 
-    res = demisto.executeCommand('ad-search', {'filter': r'(&(objectClass=user)(mail=' + email + '))',
+    response = demisto.executeCommand('ad-search', {'filter': r'(&(objectClass=user)(mail=' + email + '))',
                                                'attributes': 'displayname,' + manager_attribute})
 
-    if isError(res[0]):
-        demisto.results(res)
+    if isError(response[0]):
+        demisto.results(response)
         sys.exit(0)
 
-    manager_dn = demisto.get(res[0]['Contents'][0], manager_attribute)
-    emp_name = demisto.get(res[0]['Contents'][0], 'displayname')
+    additional_info["manager_dn"] = demisto.get(response[0]['Contents'][0], manager_attribute)
+    additional_info["employee_name"] = demisto.get(response[0]['Contents'][0], 'displayname')
 
-    if not manager_dn:
+    if not additional_info["manager_dn"]:
         demisto.results('Unable to get manager email')
         sys.exit(0)
 
-    filter_str = r'(&(objectClass=User)(distinguishedName=' + manager_dn + '))'
-    res = demisto.executeCommand('ad-search', {'filter': filter_str, 'attributes': 'displayname,mail'})
+    filter_str = r'(&(objectClass=User)(distinguishedName=' + additional_info["manager_dn"] + '))'
+    response = demisto.executeCommand('ad-search', {'filter': filter_str, 'attributes': 'displayname,mail'})
 
-    if isError(res[0]):
-        demisto.results(res)
+    if isError(response[0]):
+        demisto.results(response)
         sys.exit(0)
 
-    manager_email = demisto.get(res[0]['Contents'][0], 'mail')
-    manager_name = demisto.get(res[0]['Contents'][0], 'displayname')
+    additional_info["manager_email"] = demisto.get(response[0]['Contents'][0], 'mail')
+    additional_info["manager_name"] = demisto.get(response[0]['Contents'][0], 'displayname')
 
-    if not manager_dn:
-        demisto.results('Unable to get manager email from DN - ' + manager_dn)
-        sys.exit(0)
+    return additional_info
 
-    allow_reply = demisto.get(demisto.args(), 'allow_reply')
+
+def generate_mail_subject(incident_subject: str, allow_reply: bool = True) -> str:
+    subject = incident_subject + ' - #' + demisto.investigation().get('id')
 
     if allow_reply:
-        res = demisto.executeCommand('addEntitlement',
-                                     {'persistent': demisto.get(demisto.args(), 'persistent'),
-                                      'replyEntriesTag': demisto.get(demisto.args(), 'replyEntriesTag')})
-        if isError(res[0]):
-            demisto.results(res)
+        response = demisto.executeCommand('addEntitlement',
+                                          {'persistent': demisto.get(demisto.args(), 'persistent'),
+                                           'replyEntriesTag': demisto.get(demisto.args(), 'replyEntriesTag')})
+
+        if isError(response[0]):
+            demisto.results(response)
             sys.exit(0)
-        entitlement = demisto.get(res[0], 'Contents')
+
+        entitlement = demisto.get(response[0], 'Contents')
+
         if not entitlement:
             demisto.results('Unable to get entitlement')
             sys.exit(0)
-        subject = demisto.gets(demisto.incidents()[0], 'name') + ' - #' + demisto.investigation()['id'] + ' ' + entitlement
-    else:
-        subject = demisto.gets(demisto.incidents()[0], 'name') + ' - #' + demisto.investigation()['id']
 
-    body = demisto.get(demisto.args(), 'body')
+        subject += ' ' + entitlement
 
-    if not body:
-        body = """
-        Hi $manager_name,
-        We've received the following request below from $emp_name. \
-        Please reply to this email with either "approve" or "deny".
-        Cheers,
-        Your friendly security team
-        """
+    return subject
+
+
+def generate_mail_body(manager_name, employee_name, employee_request) -> str:
+    body = """
+    Hi $manager_name,
+    We've received the following request below from $employee_name. \
+    Please reply to this email with either "approve" or "deny".
+    Cheers,
+    Your friendly security team
+    """
 
     actual_body = Template(body)
-    emp_request = demisto.get(demisto.args(), 'request')
 
-    if not emp_request:
-        emp_request = demisto.incidents()[0]['details']
+    return textwrap.dedent(actual_body.safe_substitute(manager_name=manager_name, employee_name=employee_name))\
+        + '\n----------' + employee_request
 
-    demisto.results(demisto.executeCommand(
-        'send-mail',
-        {
-            'to': manager_email,
-            'subject': subject,
-            'body': textwrap.dedent(actual_body.safe_substitute(managerName=manager_name, empName=emp_name))
-            + '\n----------' + emp_request}
-    ))
+
+def main():
+    email = demisto.get(demisto.args(), 'email')
+    manager_attribute = demisto.get(demisto.args(), 'manager')
+    additional_info = find_additional_incident_info(demisto.incidents()[0])
+
+    if not email:
+        if additional_info.get("employee_email"):
+            email = additional_info["employee_email"]
+
+        else:
+            demisto.results('Could not find employee email. Quiting.')
+
+    additional_info.update(find_additional_ad_info(email=email, manager_attribute=manager_attribute))
+
+    body = demisto.get(demisto.args(), 'body')
+    employee_request = demisto.get(demisto.args(), 'request')
+
+    if not employee_request:
+        employee_request = additional_info.get("employee_request")
+
+    if not body:
+        body = generate_mail_body(
+            manager_name=additional_info["manager_name"],
+            employee_name=additional_info["employee_name"],
+            employee_request=employee_request)
+
+    demisto.results(
+        demisto.executeCommand('send-mail', {
+            'to': additional_info["manager_email"],
+            'subject': generate_mail_subject(
+                incident_subject=additional_info["incident_subject"],
+                allow_reply=argToBoolean(demisto.get(demisto.args(), 'allowReply'))),
+            'body': body
+        }))
 
 
 if __name__ in ('__builtin__', 'builtins', '__main__'):
