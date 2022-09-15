@@ -369,9 +369,10 @@ def test_get_audit_agent_reports(requests_mock):
     readable_output, outputs, _ = get_audit_agent_reports_command(client, args)
     expected_outputs = get_audit_agent_reports_response.get('reply').get('data')
     assert outputs['CoreApiModule.AuditAgentReports'] == expected_outputs
-    assert outputs['Endpoint(val.ID && val.ID == obj.ID && val.Vendor == obj.Vendor)'] == [{'ID': '1111', 'Hostname': '1111.eu-central-1'},
-                                                               {'ID': '1111', 'Hostname': '1111.eu-central-1'},
-                                                               {'ID': '1111', 'Hostname': '1111.eu-central-1'}]
+    assert outputs['Endpoint(val.ID && val.ID == obj.ID && val.Vendor == obj.Vendor)'] == [
+        {'ID': '1111', 'Hostname': '1111.eu-central-1'},
+        {'ID': '1111', 'Hostname': '1111.eu-central-1'},
+        {'ID': '1111', 'Hostname': '1111.eu-central-1'}]
 
 
 def test_get_distribution_status(requests_mock):
@@ -602,8 +603,9 @@ def test_allowlist_files_command_with_no_comment_file(requests_mock):
     from CoreIRApiModule import allowlist_files_command, CoreClient
     test_data = load_test_data('test_data/blocklist_allowlist_files_success.json')
     expected_command_result = {
-        'CoreApiModule.allowlist.added_hashes.fileHash(val.fileHash == obj.fileHash)': test_data['no_comment_command_args'][
-            'hash_list']}
+        'CoreApiModule.allowlist.added_hashes.fileHash(val.fileHash == obj.fileHash)':
+            test_data['no_comment_command_args'][
+                'hash_list']}
     requests_mock.post(f'{Core_URL}/public_api/v1/hash_exceptions/allowlist/', json=test_data['api_response'])
 
     client = CoreClient(
@@ -985,7 +987,8 @@ def test_retrieve_files_command(requests_mock):
     res = retrieve_files_command(client, {'endpoint_ids': 'aeec6a2cc92e46fab3b6f621722e9916',
                                           'windows_file_paths': 'C:\\Users\\demisto\\Desktop\\demisto.txt'})
 
-    assert res.readable_output == tableToMarkdown(name='Retrieve files', t=result, headerTransform=string_to_table_header)
+    assert res.readable_output == tableToMarkdown(name='Retrieve files', t=result,
+                                                  headerTransform=string_to_table_header)
     assert res.outputs == retrieve_expected_result
     assert res.raw_response == {'action_id': 1773}
 
@@ -1016,7 +1019,8 @@ def test_retrieve_files_command_using_general_file_path(requests_mock):
     res = retrieve_files_command(client, {'endpoint_ids': 'aeec6a2cc92e46fab3b6f621722e9916',
                                           'generic_file_path': 'C:\\Users\\demisto\\Desktop\\demisto.txt'})
 
-    assert res.readable_output == tableToMarkdown(name='Retrieve files', t=result, headerTransform=string_to_table_header)
+    assert res.readable_output == tableToMarkdown(name='Retrieve files', t=result,
+                                                  headerTransform=string_to_table_header)
     assert res.outputs == retrieve_expected_result
     assert res.raw_response == {'action_id': 1773}
 
@@ -2298,7 +2302,8 @@ def test_remove_blocklist_files_command(requests_mock):
     )
 
     remove_blocklist_files_response = load_test_data('./test_data/remove_blocklist_files.json')
-    requests_mock.post(f'{Core_URL}/public_api/v1/hash_exceptions/blocklist/remove/', json=remove_blocklist_files_response)
+    requests_mock.post(f'{Core_URL}/public_api/v1/hash_exceptions/blocklist/remove/',
+                       json=remove_blocklist_files_response)
     hash_list = ["11d69fb388ff59e5ba6ca217ca04ecde6a38fa8fb306aa5f1b72e22bb7c3a25b",
                  "e5ab4d81607668baf7d196ae65c9cf56dd138e3fe74c4bace4765324a9e1c565"]
     res = remove_blocklist_files_command(client=client, args={
@@ -2355,7 +2360,8 @@ def test_remove_allowlist_files_command(requests_mock):
     )
 
     remove_allowlist_files_response = load_test_data('./test_data/remove_blocklist_files.json')
-    requests_mock.post(f'{Core_URL}/public_api/v1/hash_exceptions/allowlist/remove/', json=remove_allowlist_files_response)
+    requests_mock.post(f'{Core_URL}/public_api/v1/hash_exceptions/allowlist/remove/',
+                       json=remove_allowlist_files_response)
     hash_list = ["11d69fb388ff59e5ba6ca217ca04ecde6a38fa8fb306aa5f1b72e22bb7c3a25b",
                  "e5ab4d81607668baf7d196ae65c9cf56dd138e3fe74c4bace4765324a9e1c565"]
     res = remove_allowlist_files_command(client=client, args={
@@ -2661,16 +2667,18 @@ def test_get_dynamic_analysis(requests_mock):
 
 def test_parse_get_script_execution_results():
     from CoreIRApiModule import parse_get_script_execution_results
-    results = [{'endpoint_name': 'endpoint_name', 'endpoint_ip_address': ['1.1.1.1'], 'endpoint_status': 'endpoint_status',
-                'domain': 'env', 'endpoint_id': 'endpoint_id', 'execution_status': 'COMPLETED_SUCCESSFULLY',
-                'standard_output': 'Running command "command_executed"', 'retrieved_files': 0, 'failed_files': 0,
-                'retention_date': None, 'command_executed': ['command_output']}]
+    results = [
+        {'endpoint_name': 'endpoint_name', 'endpoint_ip_address': ['1.1.1.1'], 'endpoint_status': 'endpoint_status',
+         'domain': 'env', 'endpoint_id': 'endpoint_id', 'execution_status': 'COMPLETED_SUCCESSFULLY',
+         'standard_output': 'Running command "command_executed"', 'retrieved_files': 0, 'failed_files': 0,
+         'retention_date': None, 'command_executed': ['command_output']}]
     res = parse_get_script_execution_results(results)
-    expected_res = [{'endpoint_name': 'endpoint_name', 'endpoint_ip_address': ['1.1.1.1'], 'endpoint_status': 'endpoint_status',
-                     'domain': 'env', 'endpoint_id': 'endpoint_id', 'execution_status': 'COMPLETED_SUCCESSFULLY',
-                     'standard_output': 'Running command "command_executed"', 'retrieved_files': 0, 'failed_files': 0,
-                     'retention_date': None, 'command_executed': ['command_output'], 'command': 'command_executed',
-                     'command_output': ['command_output']}]
+    expected_res = [
+        {'endpoint_name': 'endpoint_name', 'endpoint_ip_address': ['1.1.1.1'], 'endpoint_status': 'endpoint_status',
+         'domain': 'env', 'endpoint_id': 'endpoint_id', 'execution_status': 'COMPLETED_SUCCESSFULLY',
+         'standard_output': 'Running command "command_executed"', 'retrieved_files': 0, 'failed_files': 0,
+         'retention_date': None, 'command_executed': ['command_output'], 'command': 'command_executed',
+         'command_output': ['command_output']}]
     assert res == expected_res
 
 
@@ -2788,7 +2796,8 @@ class TestGetAlertByFilter:
         api_response = load_test_data('./test_data/get_alerts_by_filter_results.json')
         requests_mock.post(f'{Core_URL}/public_api/v1/alerts/get_alerts_by_filter_data/', json=api_response)
         request_data_log = mocker.patch.object(demisto, 'debug')
-        mocker.patch.object(dateparser, 'parse', return_value=dt(year=2022, month=5, day=24, hour=13, minute=0, second=0))
+        mocker.patch.object(dateparser, 'parse',
+                            return_value=dt(year=2022, month=5, day=24, hour=13, minute=0, second=0))
         client = CoreClient(
             base_url=f'{Core_URL}/public_api/v1', headers={}
         )
@@ -2829,7 +2838,8 @@ class TestGetAlertByFilter:
         api_response = load_test_data('./test_data/get_alerts_by_filter_results.json')
         requests_mock.post(f'{Core_URL}/public_api/v1/alerts/get_alerts_by_filter_data/', json=api_response)
         request_data_log = mocker.patch.object(demisto, 'debug')
-        mocker.patch.object(dateparser, 'parse', return_value=dt(year=2022, month=5, day=24, hour=13, minute=0, second=0))
+        mocker.patch.object(dateparser, 'parse',
+                            return_value=dt(year=2022, month=5, day=24, hour=13, minute=0, second=0))
         client = CoreClient(
             base_url=f'{Core_URL}/public_api/v1', headers={}
         )
@@ -2880,7 +2890,7 @@ class TestPollingCommands:
             )
             response_queue.append(
                 {
-                    "reply": {   # get script execution result response
+                    "reply": {  # get script execution result response
                         "script_name": "snippet script",
                         "error_message": "",
                         "results": [
@@ -2966,57 +2976,57 @@ class TestPollingCommands:
     'args, expected_filters, func, url_suffix, expected_human_readable',
     [
         (
-            {'endpoint_ids': '1,2', 'tag': 'test'},
-            [{'field': 'endpoint_id_list', 'operator': 'in', 'value': ['1', '2']}],
-            add_tag_to_endpoints_command,
-            '/tags/agents/assign/',
-            "Successfully added tag test to endpoint(s) ['1', '2']"
+                {'endpoint_ids': '1,2', 'tag': 'test'},
+                [{'field': 'endpoint_id_list', 'operator': 'in', 'value': ['1', '2']}],
+                add_tag_to_endpoints_command,
+                '/tags/agents/assign/',
+                "Successfully added tag test to endpoint(s) ['1', '2']"
         ),
         (
-            {'endpoint_ids': '1,2', 'tag': 'test', 'status': 'disconnected'},
-            [{'field': 'endpoint_status', 'operator': 'IN', 'value': ['disconnected']}],
-            add_tag_to_endpoints_command,
-            '/tags/agents/assign/',
-            "Successfully added tag test to endpoint(s) ['1', '2']"
+                {'endpoint_ids': '1,2', 'tag': 'test', 'status': 'disconnected'},
+                [{'field': 'endpoint_status', 'operator': 'IN', 'value': ['disconnected']}],
+                add_tag_to_endpoints_command,
+                '/tags/agents/assign/',
+                "Successfully added tag test to endpoint(s) ['1', '2']"
         ),
         (
-            {'endpoint_ids': '1,2', 'tag': 'test', 'hostname': 'hostname', 'group_name': 'test_group'},
-            [
-                {'field': 'group_name', 'operator': 'in', 'value': ['test_group']},
-                {'field': 'hostname', 'operator': 'in', 'value': ['hostname']}
-            ],
-            add_tag_to_endpoints_command,
-            '/tags/agents/assign/',
-            "Successfully added tag test to endpoint(s) ['1', '2']"
+                {'endpoint_ids': '1,2', 'tag': 'test', 'hostname': 'hostname', 'group_name': 'test_group'},
+                [
+                    {'field': 'group_name', 'operator': 'in', 'value': ['test_group']},
+                    {'field': 'hostname', 'operator': 'in', 'value': ['hostname']}
+                ],
+                add_tag_to_endpoints_command,
+                '/tags/agents/assign/',
+                "Successfully added tag test to endpoint(s) ['1', '2']"
         ),
         (
-            {'endpoint_ids': '1,2', 'tag': 'test'},
-            [{'field': 'endpoint_id_list', 'operator': 'in', 'value': ['1', '2']}],
-            remove_tag_from_endpoints_command,
-            '/tags/agents/remove/',
-            "Successfully removed tag test from endpoint(s) ['1', '2']"
+                {'endpoint_ids': '1,2', 'tag': 'test'},
+                [{'field': 'endpoint_id_list', 'operator': 'in', 'value': ['1', '2']}],
+                remove_tag_from_endpoints_command,
+                '/tags/agents/remove/',
+                "Successfully removed tag test from endpoint(s) ['1', '2']"
         ),
         (
-            {'endpoint_ids': '1,2', 'tag': 'test', 'platform': 'linux'},
-            [{'field': 'platform', 'operator': 'in', 'value': ['linux']}],
-            remove_tag_from_endpoints_command,
-            '/tags/agents/remove/',
-            "Successfully removed tag test from endpoint(s) ['1', '2']"
+                {'endpoint_ids': '1,2', 'tag': 'test', 'platform': 'linux'},
+                [{'field': 'platform', 'operator': 'in', 'value': ['linux']}],
+                remove_tag_from_endpoints_command,
+                '/tags/agents/remove/',
+                "Successfully removed tag test from endpoint(s) ['1', '2']"
         ),
         (
-            {'endpoint_ids': '1,2', 'tag': 'test', 'isolate': 'isolated', 'alias_name': 'alias_name'},
-            [
-                {'field': 'alias', 'operator': 'in', 'value': ['alias_name']},
-                {'field': 'isolate', 'operator': 'in', 'value': ['isolated']}
-            ],
-            remove_tag_from_endpoints_command,
-            '/tags/agents/remove/',
-            "Successfully removed tag test from endpoint(s) ['1', '2']"
+                {'endpoint_ids': '1,2', 'tag': 'test', 'isolate': 'isolated', 'alias_name': 'alias_name'},
+                [
+                    {'field': 'alias', 'operator': 'in', 'value': ['alias_name']},
+                    {'field': 'isolate', 'operator': 'in', 'value': ['isolated']}
+                ],
+                remove_tag_from_endpoints_command,
+                '/tags/agents/remove/',
+                "Successfully removed tag test from endpoint(s) ['1', '2']"
         )
     ]
 )
 def test_add_or_remove_tag_endpoint_command(
-    requests_mock, args, expected_filters, func, url_suffix, expected_human_readable
+        requests_mock, args, expected_filters, func, url_suffix, expected_human_readable
 ):
     """
     Given:
